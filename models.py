@@ -5,6 +5,7 @@ import random
 import math
 from pygame.mask import Mask
 
+import pgeng
 
 UP = Vector2(0, -1)
 
@@ -38,7 +39,6 @@ class Spaceship(GameObject):
     def update_mask(self):
         pass
 
-
     def rotate(self, clockwise=True):
         sign = 1 if clockwise else -1
         angle = self.ROTATION_SPEED * sign
@@ -63,7 +63,13 @@ class Spaceship(GameObject):
             self.position + self.direction.rotate(0) * self.SIZE // 10,
             self.position + self.direction.rotate(-135) * self.SIZE,
         ]
+
+        # Create a mask from the temporary surface
+        self.mask = pgeng.collision.create_mask_from_surface(surface, points)
+
+        # Draw the polygon on the original surface
         pygame.draw.polygon(surface, self.color, points)
+
 
     def draw_small(self, surface, position, orientation=UP):
         small_size = self.SIZE // 2

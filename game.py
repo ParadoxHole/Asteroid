@@ -1,4 +1,4 @@
-import pygame
+import pygame, pgeng
 from pygame.math import Vector2
 from models import Circle
 import random
@@ -6,6 +6,7 @@ from player import Player
 import ui
 import input_handler
 from circle_spawner import CircleSpawner
+
 
 class SpaceRocks:
     def __init__(self):
@@ -50,7 +51,6 @@ class SpaceRocks:
         self.bullet.fill(self.col)
         self.bullet_mask = pygame.mask.from_surface(self.bullet)
         self.pos = pygame.mouse.get_pos()
-
         
     def main_loop(self):
         while True:
@@ -118,7 +118,17 @@ class SpaceRocks:
         pass
 
     def _check_projectile_collisions(self):
-        pass   
+        pass
+
+    def _check_mouse_collision(self):
+        
+        for player in self.players:
+            offset = (self.pos[0] - player.spaceship.position.x, self.pos[1] - player.spaceship.position.y)
+            if player.spaceship.mask.overlap(self.bullet_mask,offset):
+                self.col = self.BLUE
+                print("Collision" + str(player.color))
+            else:
+                self.col = self.RED
 
     def _update_projectiles(self):
         for player in self.players:
