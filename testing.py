@@ -3,8 +3,6 @@ from pygame.math import Vector2
 from utils import wrap_position
 import random
 import math
-from pygame.mask import Mask
-
 import pgeng
 
 UP = Vector2(0, -1)
@@ -44,8 +42,6 @@ class Spaceship(GameObject):
             self.position + self.direction.rotate(0) * self.SIZE // 10,
             self.position + self.direction.rotate(-135) * self.SIZE,
         ]
-        
-        # Create a polygon mask using pgeng
         self.polygon = pgeng.Polygon(points, self.color)
         self.mask = self.polygon.mask
 
@@ -53,10 +49,11 @@ class Spaceship(GameObject):
         sign = 1 if clockwise else -1
         angle = self.ROTATION_SPEED * sign
         self.direction.rotate_ip(angle)
+        self.update_mask()
 
     def accelerate(self):
         self.velocity += self.direction * self.ACCELERATION
-        
+
     def apply_friction(self):
         self.velocity *= self.FRICTION
 
@@ -66,13 +63,9 @@ class Spaceship(GameObject):
         self.projectiles.append(projectile)
 
     def draw(self, surface):
-        # Draw the polygon on the surface
         self.polygon.render(surface)
-        self.update_mask()
-
-        # Draw the mask for debugging purposes
         mask_surface = self.mask.to_surface()
-        mask_surface.set_colorkey((0, 0, 0))  # Set the background color to transparent
+        mask_surface.set_colorkey((0, 0, 0))
         surface.blit(mask_surface, self.position - Vector2(self.SIZE, self.SIZE))
 
     def draw_small(self, surface, position, orientation=UP):
@@ -96,28 +89,6 @@ class Spaceship(GameObject):
         for projectile in self.projectiles:
             projectile.draw(surface)
 
-
-class Projectile(GameObject):
-    SIZE = 2
-
-    def __init__(self, position, velocity, color, lifespan=60):
-        super().__init__(position, velocity)
-        self.lifespan = lifespan
-        self.color = color
-        self.create_mask()
-
-    def create_mask(self):
-        pass
-
-    def update(self):
-        self.lifespan -= 1
-
-    def is_alive(self):
-        return self.lifespan > 0
-
-    def draw(self, surface):
-        pygame.draw.circle(surface, self.color, (int(self.position.x), int(self.position.y)), self.SIZE)
-
 class Circle(GameObject):
     SIZE_MAP = {
         "large": 50,
@@ -129,10 +100,8 @@ class Circle(GameObject):
     def __init__(self, position, size_category):
         self.size_category = size_category
         self.size = self.SIZE_MAP[size_category]
-
         velocity = Vector2(random.uniform(-self.MAX_SPEED, self.MAX_SPEED), random.uniform(-self.MAX_SPEED, self.MAX_SPEED))
         super().__init__(position, velocity)
-
         self.vertices = self.generate_vertices(self.size)
         self.create_mask()
 
@@ -140,7 +109,7 @@ class Circle(GameObject):
         verts = 20
         vertices = []
         for i in range(verts):
-            noise = random.uniform(0.9, 1.2)  # Adjust noise to shape
+            noise = random.uniform(0.9, 1.2)
             angle = (i / verts) * 2 * math.pi
             x = noise * size * math.sin(angle)
             y = noise * size * math.cos(angle)
@@ -149,7 +118,7 @@ class Circle(GameObject):
 
     def create_mask(self):
         points = [(self.position[0] + x, self.position[1] + y) for x, y in self.vertices]
-        self.polygon = pgeng.Polygon(points, (255, 255, 255))  # Use white for the mask
+        self.polygon = pgeng.Polygon(points, (255, 255, 255))
         self.mask = self.polygon.mask
 
     def draw(self, surface):
@@ -162,15 +131,76 @@ class Circle(GameObject):
             new_size_category = "small"
         else:
             return []
-
         angle = random.uniform(0, 360)
         velocity_1 = self.velocity.rotate(angle)
         velocity_2 = self.velocity.rotate(-angle)
-
         new_circle_1 = Circle(self.position, new_size_category)
         new_circle_1.velocity = velocity_1
-
         new_circle_2 = Circle(self.position, new_size_category)
         new_circle_2.velocity = velocity_2
-
         return [new_circle_1, new_circle_2]
+
+class Projectile(GameObject):
+    SIZE = 2
+
+    def __init__(self, position, velocity, color, lifespan=60):
+        super().__init__(position, velocity)
+        self.lifespan = lifespan
+        self.color = color
+        self.create_mask()
+
+    def create_mask(self):
+        self.circle = pgeng.Circle(self.position, self.SIZE, self.color)
+        self.mask = self.circle.mask
+
+    def update(self):
+        self.lifespan -= 1
+
+    def is_alive(self):
+        return self.lifespan > 0
+
+    def draw(self, surface):
+        pygame.draw.circle(surface, self.color, (int(self.position.x), int(self.position.y)), self.SIZE)
+
+def main():
+    pygame.init()
+    screen = pygame.display.set_mode((800, 600))
+    clock = pygame.time.Clock()
+    spaceship = Spaceship(Vector2(400, 300), (255, 255, 255))
+    circles = [Circle(Vector2(random.randint(0, 800), random.randint(0, 600)), random.choice(["large", "medium", "small"])) for _ in range(5)]
+    running = True
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    running = False
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_LEFT]:
+            spaceship.rotate(clockwise=False)
+        if keys[pygame.K_RIGHT]:
+            spaceship.rotate(clockwise=True)
+        if keys[pygame.K_UP]:
+            spaceship.accelerate()
+        spaceship.move(screen)
+        for circle in circles:
+            circle.move(screen)
+        colliding = False
+        for circle in circles:
+            if spaceship.polygon.collide(circle.polygon):
+                colliding = True
+                circle.polygon.colour = (255, 0, 0)
+            else:
+                circle.polygon.colour = (255, 255, 255)
+        screen.fill((0, 0, 0))
+        spaceship.draw(screen)
+        for circle in circles:
+            circle.draw(screen)
+        spaceship.draw_projectiles(screen)
+        pygame.display.flip()
+        clock.tick(60)
+    pygame.quit()
+
+if __name__ == "__main__":
+    main()
