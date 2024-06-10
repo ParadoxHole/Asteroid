@@ -1,9 +1,9 @@
 import random
 import pygame
-from models import Circle
+from models import Asteroid
 from pygame.math import Vector2
 
-class CircleSpawner:
+class AsteroidSpawner:
     def __init__(self, screen_width, screen_height, players):
         self.screen_width = screen_width
         self.screen_height = screen_height
@@ -50,11 +50,11 @@ class CircleSpawner:
             position = self._random_edge_position()
         else:
             position = self._random_position()
-            radius = Circle.SIZE_MAP[size_category]
+            radius = Asteroid.SIZE_MAP[size_category]
             while not self._is_position_valid(position, radius):
                 position = self._random_position()
                 
-        return Circle(position, size_category)
+        return Asteroid(position, size_category)
 
     def spawn_initial_circles(self, num_circles):
         return [self.spawn_circle(from_edge=False) for _ in range(num_circles)]

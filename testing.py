@@ -49,7 +49,6 @@ class Spaceship(GameObject):
         sign = 1 if clockwise else -1
         angle = self.ROTATION_SPEED * sign
         self.direction.rotate_ip(angle)
-        self.update_mask()
 
     def accelerate(self):
         self.velocity += self.direction * self.ACCELERATION
@@ -63,10 +62,8 @@ class Spaceship(GameObject):
         self.projectiles.append(projectile)
 
     def draw(self, surface):
+        self.update_mask()
         self.polygon.render(surface)
-        mask_surface = self.mask.to_surface()
-        mask_surface.set_colorkey((0, 0, 0))
-        surface.blit(mask_surface, self.position - Vector2(self.SIZE, self.SIZE))
 
     def draw_small(self, surface, position, orientation=UP):
         small_size = self.SIZE // 2
@@ -89,7 +86,7 @@ class Spaceship(GameObject):
         for projectile in self.projectiles:
             projectile.draw(surface)
 
-class Circle(GameObject):
+class Asteroid(GameObject):
     SIZE_MAP = {
         "large": 50,
         "medium": 30,
@@ -134,9 +131,9 @@ class Circle(GameObject):
         angle = random.uniform(0, 360)
         velocity_1 = self.velocity.rotate(angle)
         velocity_2 = self.velocity.rotate(-angle)
-        new_circle_1 = Circle(self.position, new_size_category)
+        new_circle_1 = Asteroid(self.position, new_size_category)
         new_circle_1.velocity = velocity_1
-        new_circle_2 = Circle(self.position, new_size_category)
+        new_circle_2 = Asteroid(self.position, new_size_category)
         new_circle_2.velocity = velocity_2
         return [new_circle_1, new_circle_2]
 
@@ -150,7 +147,7 @@ class Projectile(GameObject):
         self.create_mask()
 
     def create_mask(self):
-        self.circle = pgeng.Circle(self.position, self.SIZE, self.color)
+        self.circle = pgeng.Asteroid(self.position, self.SIZE, self.color)
         self.mask = self.circle.mask
 
     def update(self):
@@ -167,7 +164,7 @@ def main():
     screen = pygame.display.set_mode((800, 600))
     clock = pygame.time.Clock()
     spaceship = Spaceship(Vector2(400, 300), (255, 255, 255))
-    circles = [Circle(Vector2(random.randint(0, 800), random.randint(0, 600)), random.choice(["large", "medium", "small"])) for _ in range(5)]
+    circles = [Asteroid(Vector2(random.randint(0, 800), random.randint(0, 600)), random.choice(["large", "medium", "small"])) for _ in range(5)]
     running = True
     while running:
         for event in pygame.event.get():
@@ -186,10 +183,8 @@ def main():
         spaceship.move(screen)
         for circle in circles:
             circle.move(screen)
-        colliding = False
         for circle in circles:
             if spaceship.polygon.collide(circle.polygon):
-                colliding = True
                 circle.polygon.colour = (255, 0, 0)
             else:
                 circle.polygon.colour = (255, 255, 255)

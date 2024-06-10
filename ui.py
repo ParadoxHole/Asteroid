@@ -37,7 +37,7 @@ def draw_respawn_screen(screen, player, player_number):
             screen.blit(rotated_text, (screen_width-30, screen_height-300))
 
 def draw_win_screen(screen):
-    font = pygame.font.Font("Vector.ttf", 74)
+    font = pygame.font.Font("Fonts/Vectorb.ttf", 74)
     text = font.render("You Win!", True, (255, 255, 255))
     screen.blit(text, (300, 300))
     text = font.render("Press Enter to Restart", True, (255, 255, 255))

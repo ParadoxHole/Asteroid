@@ -35,6 +35,14 @@ class Spaceship(GameObject):
         self.color = color
         self.lives = self.INITIAL_LIVES
         self.update_mask()
+        self.projectileSize = 2
+        self.SHOOT_DELAY = 200
+        self.last_shot_time = 0
+
+        # superpower attributes
+        self.shootType = "single" # single, double, boomerang**
+        self.shield_active = False
+        self.shields = [False, False, False]
 
     def update_mask(self):
         # Create points for the spaceship polygon
@@ -44,8 +52,6 @@ class Spaceship(GameObject):
             self.position + self.direction.rotate(0) * self.SIZE // 10,
             self.position + self.direction.rotate(-135) * self.SIZE,
         ]
-        
-        # Create a polygon mask using pgeng
         self.polygon = pgeng.Polygon(points, self.color)
         self.mask = self.polygon.mask
 
@@ -56,24 +62,44 @@ class Spaceship(GameObject):
 
     def accelerate(self):
         self.velocity += self.direction * self.ACCELERATION
-        
+
     def apply_friction(self):
         self.velocity *= self.FRICTION
 
     def shoot(self):
-        projectile_velocity = self.direction * 5
-        projectile = Projectile(self.position, projectile_velocity, self.color)
-        self.projectiles.append(projectile)
+        if self.shootType == "single":
+            projectile_velocity = self.direction * 5
+            projectile = Projectile(self.position, projectile_velocity, self.color, self.projectileSize)
+            self.projectiles.append(projectile)
+        elif self.shootType == "double":
+            projectile_velocity = self.direction.rotate(10) * 5
+            projectile = Projectile(self.position, projectile_velocity, self.color, self.projectileSize)
+            self.projectiles.append(projectile)
+            projectile_velocity = self.direction.rotate(-10) * 5
+            projectile = Projectile(self.position, projectile_velocity, self.color, self.projectileSize)
+            self.projectiles.append(projectile)
+        elif self.shootType == "boomerang":
+            """Shoot a boomerang projectile #not implemented"""
+            projectile_velocity = self.direction * 5
+            projectile = Projectile(self.position, projectile_velocity, self.color, self.projectileSize)
+            self.projectiles.append(projectile)
 
     def draw(self, surface):
-        # Draw the polygon on the surface
-        self.polygon.render(surface)
         self.update_mask()
+        self.polygon.render(surface)
+        if self.shield_active:
+            self.draw_shield(surface)
 
-        # Draw the mask for debugging purposes
-        mask_surface = self.mask.to_surface()
-        mask_surface.set_colorkey((0, 0, 0))  # Set the background color to transparent
-        surface.blit(mask_surface, self.position - Vector2(self.SIZE, self.SIZE))
+    def draw_shield(self, surface):
+        # Draw shields spinning around the spaceship
+        for i in range(3):
+            if self.shields[i]:
+                angle = (pygame.time.get_ticks() / 10) % 360
+                direction = UP.rotate(angle + 120 * i)
+                self.draw_small(surface, self.position + direction * 30, direction)
+                pygame.draw.circle(surface, (255, 0, 0), (int(self.position.x + direction.x * 30), int(self.position.y + direction.y * 30)), self.SIZE // 2, 2)
+                # update mask ^position
+                self.shields[i]['mask'] = pgeng.Circle(self.position + direction * 30, self.SIZE // 2, self.color)
 
     def draw_small(self, surface, position, orientation=UP):
         small_size = self.SIZE // 2
@@ -94,31 +120,25 @@ class Spaceship(GameObject):
 
     def draw_projectiles(self, surface):
         for projectile in self.projectiles:
-            projectile.draw(surface)
+            projectile.draw(surface, self.projectileSize)
 
+    def activate_shield(self):
+        self.shield_active = True
+        angle = (pygame.time.get_ticks() / 10) % 360
+        self.shields = [
+            {
+                'position': self.position + UP.rotate(angle + 120 * i) * 30,
+                'mask': pgeng.Circle(self.position + UP.rotate(angle + 120 * i) * 30, self.SIZE // 2, self.color),
+                'color': self.color
+            }
+            for i in range(3)
+        ]
 
-class Projectile(GameObject):
-    SIZE = 2
+    def deactivate_shield(self):
+        self.shield_active = False
+        self.shields = [False, False, False]
 
-    def __init__(self, position, velocity, color, lifespan=60):
-        super().__init__(position, velocity)
-        self.lifespan = lifespan
-        self.color = color
-        self.create_mask()
-
-    def create_mask(self):
-        pass
-
-    def update(self):
-        self.lifespan -= 1
-
-    def is_alive(self):
-        return self.lifespan > 0
-
-    def draw(self, surface):
-        pygame.draw.circle(surface, self.color, (int(self.position.x), int(self.position.y)), self.SIZE)
-
-class Circle(GameObject):
+class Asteroid(GameObject):
     SIZE_MAP = {
         "large": 50,
         "medium": 30,
@@ -129,10 +149,8 @@ class Circle(GameObject):
     def __init__(self, position, size_category):
         self.size_category = size_category
         self.size = self.SIZE_MAP[size_category]
-
         velocity = Vector2(random.uniform(-self.MAX_SPEED, self.MAX_SPEED), random.uniform(-self.MAX_SPEED, self.MAX_SPEED))
         super().__init__(position, velocity)
-
         self.vertices = self.generate_vertices(self.size)
         self.create_mask()
 
@@ -140,7 +158,7 @@ class Circle(GameObject):
         verts = 20
         vertices = []
         for i in range(verts):
-            noise = random.uniform(0.9, 1.2)  # Adjust noise to shape
+            noise = random.uniform(0.9, 1.2)
             angle = (i / verts) * 2 * math.pi
             x = noise * size * math.sin(angle)
             y = noise * size * math.cos(angle)
@@ -149,11 +167,16 @@ class Circle(GameObject):
 
     def create_mask(self):
         points = [(self.position[0] + x, self.position[1] + y) for x, y in self.vertices]
-        self.polygon = pgeng.Polygon(points, (255, 255, 255))  # Use white for the mask
+        self.polygon = pgeng.Polygon(points, (255, 255, 255))
         self.mask = self.polygon.mask
 
     def draw(self, surface):
         self.polygon.render(surface)
+
+    def move(self, surface):
+        super().move(surface)
+        self.create_mask()
+        
 
     def split(self):
         if self.size_category == "large":
@@ -162,15 +185,34 @@ class Circle(GameObject):
             new_size_category = "small"
         else:
             return []
-
         angle = random.uniform(0, 360)
         velocity_1 = self.velocity.rotate(angle)
         velocity_2 = self.velocity.rotate(-angle)
-
-        new_circle_1 = Circle(self.position, new_size_category)
+        new_circle_1 = Asteroid(self.position, new_size_category)
         new_circle_1.velocity = velocity_1
-
-        new_circle_2 = Circle(self.position, new_size_category)
+        new_circle_2 = Asteroid(self.position, new_size_category)
         new_circle_2.velocity = velocity_2
-
         return [new_circle_1, new_circle_2]
+
+class Projectile(GameObject):
+
+    def __init__(self, position, velocity, color, size=2, lifespan=60):
+        super().__init__(position, velocity)
+        self.lifespan = lifespan
+        self.color = color
+        self.size = size
+        self.create_mask()
+
+    def create_mask(self):
+        self.circle = pgeng.Circle(self.position, self.size, self.color)
+        self.mask = self.circle.mask
+
+    def update(self):
+        self.lifespan -= 1
+        self.create_mask()
+
+    def is_alive(self):
+        return self.lifespan > 0
+
+    def draw(self, surface, size):
+        self.circle.render(surface)

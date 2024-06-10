@@ -19,7 +19,49 @@ class Player:
         self.respawn_key = self.controls['respawn']
         self.respawn_time = 0
         self.waiting_to_respawn = False
+        self.trail = Trail(self)
 
+        self.superpower_duration = 0
+        self.superpower_active = False
+        self.superpower_time = 0
+        self.superpower_type = None
+
+    def update(self):
+        self.trail.update()
+
+        if self.superpower_active: 
+            if self.superpower_duration < pygame.time.get_ticks() - self.superpower_time or self.active == False:
+                self.superpower_active = False
+                self.color = (255, 0, 0)
+                # Reset spaceship attributes to default values
+                self.spaceship.ACCELERATION = 0.1
+                self.spaceship.SHOOT_DELAY = 200
+                self.spaceship.projectileSize = 2
+                self.spaceship.DOUBLE_SHOT = False
+                self.invulnerable = False
+                self.spaceship.deactivate_shield()
+                self.spaceship.shootType = "single"
+            else:
+                if self.superpower_type =='faster_spaceship':
+                    self.spaceship.ACCELERATION = 0.14
+                elif self.superpower_type == 'invincibility':
+                    self.invulnerable = True
+                    self.respawn_time = pygame.time.get_ticks()
+                elif self.superpower_type == 'shield':
+                    if not self.spaceship.shield_active:
+                        self.spaceship.activate_shield()
+                elif self.superpower_type == 'double_shot':
+                    self.spaceship.shootType = "double"
+                elif self.superpower_type == 'boomerang_projectiles':
+                    self.spaceship.shootType = "boomerang"
+                elif self.superpower_type == 'faster_shot':
+                    self.spaceship.SHOOT_DELAY = 10
+                elif self.superpower_type == 'bigger_shot':
+                    self.spaceship.projectileSize = 10
+                    self.spaceship.SHOOT_DELAY = 500
+                elif self.superpower_type == 'heal':
+                    self.lives += 1
+                    self.superpower_active = False
 
     def handle_input(self):
         if not self.active:
@@ -35,10 +77,11 @@ class Player:
             if is_key_pressed[self.controls['up']]:
                 self.spaceship.accelerate()
             if is_key_pressed[self.controls['shoot']]:
-                if not self.shooting:
+                if not self.shooting and (pygame.time.get_ticks() - self.spaceship.last_shot_time >= self.spaceship.SHOOT_DELAY or self.spaceship.last_shot_time == 0):
                     self.spaceship.shoot()
+                    self.spaceship.last_shot_time = pygame.time.get_ticks()
                     self.shooting = True
-            else:
+            elif pygame.time.get_ticks() - self.spaceship.last_shot_time >= self.spaceship.SHOOT_DELAY:
                 self.shooting = False
 
         # Handle joystick input if available
@@ -57,7 +100,6 @@ class Player:
             else :
                 self.shooting = False
 
-
     def move(self, surface):
         if self.active:
             self.spaceship.move(surface)
@@ -66,10 +108,11 @@ class Player:
         if self.active:
             if self.invulnerable:
                 # Blink effect to show invulnerability
-                if pygame.time.get_ticks() % 500 < 350:
+                if pygame.time.get_ticks() % 200 < 150: # COORECT THE BLINKING TIME HERE !!!!!!
                     self.spaceship.draw(surface)
             else:
                 self.spaceship.draw(surface)
+            self.trail.draw(surface)
             self.spaceship.draw_projectiles(surface)
 
     def reset_lives(self):
@@ -121,3 +164,46 @@ class Player:
             for i in range(player.lives):
                 life_position = Vector2(screen_width - life_offset.x, life_offset.y + (i+1) * life_offset.y) 
                 player.spaceship.draw_small(surface, life_position, Vector2(-1, 0))
+
+class TrailParticle:
+    def __init__(self, position, color, max_lifetime):
+        self.position = position
+        self.color = color
+        self.max_lifetime = max_lifetime
+        self.lifetime = max_lifetime
+
+    def update(self):
+        self.lifetime -= 1
+        if self.lifetime < 0:
+            self.lifetime = 0
+
+    def draw(self, surface):
+        alpha = self.lifetime / self.max_lifetime * 255
+        pygame.draw.circle(surface, (self.color[0], self.color[1], self.color[2], alpha), (int(self.position.x), int(self.position.y)), 3)
+
+class Trail:
+    def __init__(self, player, length=10 , max_lifetime=5):
+        self.player = player
+        self.length = length
+        self.max_lifetime = max_lifetime
+        self.particles = []
+
+    def update(self):
+        if self.player.spaceship.velocity.length() > 2:
+            self.create_particle()
+
+    
+        for particle in self.particles:
+            particle.update()
+            if particle.lifetime == 0 or self.player.spaceship.velocity.length() < 2:
+                self.particles.remove(particle)
+
+    def create_particle(self):
+        position = self.player.spaceship.position - self.player.spaceship.direction * (self.player.spaceship.SIZE * 0.6)
+        color = self.player.spaceship.color
+        particle = TrailParticle(position, color, self.max_lifetime)
+        self.particles.append(particle)
+
+    def draw(self, surface):
+        for particle in self.particles:
+            particle.draw(surface)
