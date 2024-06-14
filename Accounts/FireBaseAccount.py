@@ -1,36 +1,32 @@
 import firebase_admin
-from firebase_admin import db, credentials
+from firebase_admin import db, credentials, auth
 
 cred = credentials.Certificate("crendentials.json")
-firebase_admin.initialize_app(cred, {"databaseURL":"https://players-7df06-default-rtdb.europe-west1.firebasedatabase.app/"})
+firebase_admin.initialize_app(cred, {"databaseURL":"https://forfourplayers-default-rtdb.europe-west1.firebasedatabase.app/"})
 
-# creating reference to root node
-ref = db.reference("/")
-# retrieving data from root node
-ref.get()
+# Reference to the loginEvents node
+login_events_ref = db.reference('loginEvents')
 
-db.reference("/name").get()
-# set operation
-db.reference("/videos").set(3)
-ref.get()
+# Function to handle new entries
+def handle_new_entry(event):
+    print("New entry detected!")
+    data = event.data
+    user_id = data.get('userId')
+    if user_id:
+        try:
+            # Fetch the user's email using the userId from Firebase Authentication
+            user = auth.get_user(user_id)
+            email = user.email
+            name = user.display_name
+            print(f'Client ID: {user_id}, Email: {email}, Name: {name}')
+        except auth.AuthError as e:
+            print(f'Error retrieving user data: {e}')
+        except Exception as e:
+            print(f'An unexpected error occurred: {e}')
+        if listener:
+            listener.close()
+            print("Stopped listening for new login events.")
+            
 
-# update operation (update existing value)
-db.reference("/").update({"language": "python"})
-ref.get()
-
-# update operation (add new key value)
-db.reference("/").update({"subscribed": True})
-ref.get()
-
-# push operation
-db.reference("/titles").push().set("create modern ui in python")
-ref.get()
-
-# transaction
-def increment_transaction(current_val):
-    return current_val + 1
-
-db.reference("/title_count").transaction(increment_transaction)
-ref.get()
-
-print(ref.key)
+# Listen for new entries in the loginEvents node
+listener = login_events_ref.listen(handle_new_entry)

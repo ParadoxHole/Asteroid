@@ -44,11 +44,14 @@ class SpaceRocks:
 
         self.background = pygame.image.load("img/bg5.jpg")
 
+
+
     def main_loop(self):
         while True:
             self._handle_input()
             self._process_game_logic()
             self._draw()
+
 
     def _init_pygame(self):
         pygame.init()
@@ -182,6 +185,7 @@ class SpaceRocks:
                     player.spaceship.projectiles.remove(projectile)
                     
     def _draw(self):
+        
         self.screen.blit(self.background, (0, 0))
         if self.state == "start":
             ui.draw_start_screen(self.screen)
@@ -200,6 +204,8 @@ class SpaceRocks:
             ui.draw_game_over_screen(self.screen)
         elif self.state == "win":
             ui.draw_win_screen(self.screen)
+
+        self.screen.blit(pygame.font.Font(None, 36).render(f"FPS: {int(self.clock.get_fps())}", True, pygame.Color('white')), (10, 10))
 
         pygame.display.flip()
         self.clock.tick(60)

@@ -3,7 +3,6 @@ from pygame.math import Vector2
 from utils import wrap_position
 import random
 import math
-from pygame.mask import Mask
 
 import pgeng
 
@@ -171,7 +170,7 @@ class Asteroid(GameObject):
         self.mask = self.polygon.mask
 
     def draw(self, surface):
-        self.polygon.render(surface)
+        self.polygon.render(surface, width=2)
 
     def move(self, surface):
         super().move(surface)
