@@ -1,12 +1,13 @@
 import pygame
 from pygame.math import Vector2
 from models import Spaceship
+import firebase_listener
 
 class Player:
     MAX_LIVES = 3
     INVULNERABILITY_TIME = 2000  # 3 seconds
 
-    def __init__(self, position, color, controls,joystick=None):
+    def __init__(self, position, color, controls, user_id=None, joystick=None):
         self.spaceship = Spaceship(position, color)
         self.controls = controls
         self.joystick = joystick
@@ -20,6 +21,9 @@ class Player:
         self.respawn_time = 0
         self.waiting_to_respawn = False
         self.trail = Trail(self)
+        
+        self.score = 0
+        self.userId = user_id 
 
         self.superpower_duration = 0
         self.superpower_active = False
@@ -124,6 +128,8 @@ class Player:
         self.lives -= 1
         if self.lives <= 0:
             self.active = False
+            if self.userId:
+                firebase_listener.save_score(self.userId, self.score)
         else:
             self.active = False
             self.waiting_to_respawn = True

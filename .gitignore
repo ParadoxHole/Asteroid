@@ -1,3 +1,5 @@
 Accounts/Auth.py
-crendentials.json
+credentials.json
 Accounts/cred.json
+
+_pycache_/

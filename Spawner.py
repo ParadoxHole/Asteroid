@@ -1,6 +1,6 @@
 import random
 import pygame
-from models import Asteroid
+from models import Asteroid, UFO
 from pygame.math import Vector2
 
 class AsteroidSpawner:
@@ -25,16 +25,12 @@ class AsteroidSpawner:
             return Vector2(self.screen_width, random.randint(0, self.screen_height))
 
     def _is_position_valid(self, position, radius):
-        for player in self.players:
-            if player.active:
-                player_x, player_y = player.spaceship.position
-                player_size = player.spaceship.SIZE
-                player_rect = pygame.Rect(player_x - player_size // 2,
-                                        player_y - player_size // 2,
-                                        player_size, player_size)
-                circle_rect = pygame.Rect(position[0] - radius, position[1] - radius, radius * 2, radius * 2)
-                if player_rect.colliderect(circle_rect):
-                    return False
+        for player in self.players.values():
+            player_position = pygame.math.Vector2(player.spaceship.position)
+            asteroid_position = pygame.math.Vector2(position)
+            distance = player_position.distance_to(asteroid_position)
+            if distance < player.spaceship.SIZE + radius:
+                return False
         return True
 
     def spawn_circle(self, from_edge=False):
@@ -59,5 +55,35 @@ class AsteroidSpawner:
     def spawn_initial_circles(self, num_circles):
         return [self.spawn_circle(from_edge=False) for _ in range(num_circles)]
 
-    def spawn_periodic_circles(self, num_circles):
-        return [self.spawn_circle(from_edge=True) for _ in range(num_circles)]
+    def spawn_periodic_circles(self, num_circles, current_asteroids_count):
+        spawn_count = max(0, 10 - current_asteroids_count)
+        return [self.spawn_circle(from_edge=True) for _ in range(min(num_circles, spawn_count))]
+    
+    def draw(self, surface, asteroids):
+        for asteroid in asteroids:
+            asteroid.draw(surface)
+    
+class UFOSpawner:
+    def __init__(self, screen_width, screen_height, players):
+        self.screen_width = screen_width
+        self.screen_height = screen_height
+        self.players = players
+        self.ufos = []
+        self.spawn_timer_event = pygame.USEREVENT + 3
+        pygame.time.set_timer(self.spawn_timer_event, 20000)  # Spawn a new UFO every 20 seconds
+
+    def spawn_ufo(self):
+        position = Vector2(random.choice([0, self.screen_width]), random.randint(0, self.screen_height))
+        ufo = UFO(position, self.screen_width, self.screen_height)
+        self.ufos.append(ufo)
+
+    def update(self, surface):
+        for ufo in self.ufos:
+            ufo.move(surface)
+            ufo.update(self.players)
+            # Remove dead projectiles
+            ufo.projectiles = [p for p in ufo.projectiles if p.is_alive()]
+
+    def draw(self, surface):
+        for ufo in self.ufos:
+            ufo.draw(surface)

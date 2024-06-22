@@ -96,7 +96,7 @@ class Spaceship(GameObject):
                 angle = (pygame.time.get_ticks() / 10) % 360
                 direction = UP.rotate(angle + 120 * i)
                 self.draw_small(surface, self.position + direction * 30, direction)
-                pygame.draw.circle(surface, (255, 0, 0), (int(self.position.x + direction.x * 30), int(self.position.y + direction.y * 30)), self.SIZE // 2, 2)
+                pygame.draw.circle(surface, self.color, (int(self.position.x + direction.x * 30), int(self.position.y + direction.y * 30)), self.SIZE // 2, 2)
                 # update mask ^position
                 self.shields[i]['mask'] = pgeng.Circle(self.position + direction * 30, self.SIZE // 2, self.color)
 
@@ -119,7 +119,7 @@ class Spaceship(GameObject):
 
     def draw_projectiles(self, surface):
         for projectile in self.projectiles:
-            projectile.draw(surface, self.projectileSize)
+            projectile.draw(surface)
 
     def activate_shield(self):
         self.shield_active = True
@@ -192,6 +192,14 @@ class Asteroid(GameObject):
         new_circle_2 = Asteroid(self.position, new_size_category)
         new_circle_2.velocity = velocity_2
         return [new_circle_1, new_circle_2]
+    
+    def score(self):
+        if self.size_category == "large":
+            return 20
+        elif self.size_category == "medium":
+            return 40
+        else:
+            return 70
 
 class Projectile(GameObject):
 
@@ -213,5 +221,85 @@ class Projectile(GameObject):
     def is_alive(self):
         return self.lifespan > 0
 
-    def draw(self, surface, size):
+    def draw(self, surface):
         self.circle.render(surface)
+        
+class UFO(GameObject):
+    SIZE = 20
+    SPEED_RANGE = (1, 3)
+    SHOOT_DELAY = 1000  # milliseconds
+    DISAPPEAR_TIME = 3000  # milliseconds
+
+    def __init__(self, position, screen_width, screen_height, color=(255, 0, 0)):
+        self.screen_width = screen_width
+        self.screen_height = screen_height
+        self.color = color
+        self.direction = Vector2(random.choice([-1, 1]), 0)
+        self.velocity = self.direction * random.uniform(*self.SPEED_RANGE)
+        self.visible = True
+        self.disappear_time = 0
+        self.last_shot_time = pygame.time.get_ticks()
+        self.projectiles = []
+        super().__init__(position, self.velocity)
+        self.update_mask()
+
+    def update_mask(self):
+        points = [
+            self.position + self.direction.rotate(-20) * self.SIZE,
+            self.position + self.direction.rotate(20) * self.SIZE,
+            self.position + self.direction.rotate(100) * self.SIZE,
+            self.position + self.direction.rotate(135) * self.SIZE,
+            self.position + self.direction.rotate(-135) * self.SIZE,
+            self.position + self.direction.rotate(-100) * self.SIZE,
+        ]
+        self.polygon = pgeng.Polygon(points, self.color)
+        self.mask = self.polygon.mask
+
+    def move(self, surface):
+        if not self.visible:
+            return
+        
+        self.position += self.velocity
+        if self.position.x < 0 or self.position.x > self.screen_width:
+            self.disappear()  # Disappear if UFO goes off-screen
+            
+        self.update_mask()
+        for projectile in self.projectiles:
+            projectile.move(surface)
+            projectile.update()
+            
+    def disappear(self):
+        self.visible = False
+        self.disappear_time = pygame.time.get_ticks()
+
+    def reappear(self):
+        self.position = Vector2(random.choice([0, self.screen_width]), random.randint(0, self.screen_height))
+        self.direction = Vector2(random.choice([-1, 1]), 0)
+        self.velocity = self.direction * random.uniform(*self.SPEED_RANGE)
+        self.visible = True
+        self.update_mask()
+        
+    def shoot(self, target_position):
+        direction = (target_position - self.position).normalize()
+        projectile_velocity = direction * 4
+        projectile = Projectile(self.position, projectile_velocity, self.color, size=2, lifespan=100)
+        self.projectiles.append(projectile)
+
+    def update(self, players):
+        if not self.visible and pygame.time.get_ticks() - self.disappear_time > self.DISAPPEAR_TIME:
+            self.reappear()
+            
+        if self.visible:    
+            current_time = pygame.time.get_ticks()
+            if current_time - self.last_shot_time > self.SHOOT_DELAY:
+                active_players = [player for player in players.values() if player.active]
+                if active_players:
+                    target_player = random.choice(list(players.values()))
+                    self.shoot(Vector2(target_player.spaceship.position))
+                    self.last_shot_time = current_time
+
+    def draw(self, surface):
+        if self.visible:
+            self.polygon.render(surface, width=2)
+            for projectile in self.projectiles:
+                projectile.draw(surface)
