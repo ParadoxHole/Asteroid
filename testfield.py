@@ -5,10 +5,10 @@ import random
 
 # Define the UFO class
 class UFO:
-    SIZE = 20
+    SIZE = 250
     SPEED_RANGE = (1, 3)
 
-    def __init__(self, position, screen_width, screen_height, color=(255, 0, 0)):
+    def __init__(self, position, screen_width, screen_height, color=(255, 255, 255)):
         self.position = Vector2(position)
         self.screen_width = screen_width
         self.screen_height = screen_height
@@ -20,17 +20,16 @@ class UFO:
     def update_mask(self):
         # Create points for the spaceship polygon
         points = [
-            self.position + Vector2(-self.SIZE, -self.SIZE / 2),
-            self.position + Vector2(self.SIZE, -self.SIZE / 2),
-            self.position + Vector2(self.SIZE, self.SIZE / 2),
-            self.position + Vector2(-self.SIZE, self.SIZE / 2),
-            self.position + Vector2(0, 0)
+            self.position + self.direction.rotate(0) * self.SIZE,
+            self.position + self.direction.rotate(135) * self.SIZE,
+            self.position + self.direction.rotate(0) * self.SIZE // 100,
+            self.position + self.direction.rotate(-135) * self.SIZE,
         ]
         self.polygon = pgeng.Polygon(points, self.color)
         self.mask = self.polygon.mask
 
     def draw(self, surface):
-        self.polygon.render(surface, width=2)
+        self.polygon.render(surface)
 
 # Initialize Pygame
 pygame.init()
@@ -56,7 +55,7 @@ while running:
             running = False
 
     # Clear the screen
-    screen.fill((0, 0, 0))
+    screen.fill((40, 44, 52))
 
     # Draw the UFO
     ufo.draw(screen)

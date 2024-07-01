@@ -7,7 +7,7 @@ class Player:
     MAX_LIVES = 3
     INVULNERABILITY_TIME = 2000  # 3 seconds
 
-    def __init__(self, position, color, controls, user_id=None, joystick=None):
+    def __init__(self, position, color, controls, user_id='Guest', arcadeId = None, playerSeat = None, joystick=None):
         self.spaceship = Spaceship(position, color)
         self.controls = controls
         self.joystick = joystick
@@ -24,6 +24,8 @@ class Player:
         
         self.score = 0
         self.userId = user_id 
+        self.arcadeId = arcadeId
+        self.player_seat = playerSeat
 
         self.superpower_duration = 0
         self.superpower_active = False
@@ -129,7 +131,7 @@ class Player:
         if self.lives <= 0:
             self.active = False
             if self.userId:
-                firebase_listener.save_score(self.userId, self.score)
+                firebase_listener.save_score(self.userId, self.arcadeId, self.player_seat, self.score)
         else:
             self.active = False
             self.waiting_to_respawn = True
@@ -148,25 +150,25 @@ class Player:
         if self.invulnerable and pygame.time.get_ticks() - self.respawn_time >= self.INVULNERABILITY_TIME:
             self.invulnerable = False
 
-    def draw_lives(self, surface, player_index):
+    def draw_lives(self, surface, player_color):
         player = self
         screen_width = surface.get_width()
         screen_height = surface.get_height()
         life_offset = Vector2(player.spaceship.SIZE + 5, player.spaceship.SIZE + 5)
 
-        if player_index == 0:
+        if player_color == "green":
             for i in range(player.lives):
                 life_position = Vector2(screen_width - life_offset.x - (i+1) * life_offset.x, screen_height - life_offset.y) 
                 player.spaceship.draw_small(surface, life_position)
-        elif player_index == 1:
+        elif player_color == "red":
             for i in range(player.lives):
                 life_position = Vector2(life_offset.x, screen_height - life_offset.x - (i+1) * life_offset.y) 
                 player.spaceship.draw_small(surface, life_position, Vector2(1, 0))
-        elif player_index == 2:
+        elif player_color == "yellow":
             for i in range(player.lives):
                 life_position = Vector2(life_offset.x + (i+1) * life_offset.x, life_offset.y) 
                 player.spaceship.draw_small(surface, life_position, Vector2(0, 1))
-        elif player_index == 3:
+        elif player_color == "blue":
             for i in range(player.lives):
                 life_position = Vector2(screen_width - life_offset.x, life_offset.y + (i+1) * life_offset.y) 
                 player.spaceship.draw_small(surface, life_position, Vector2(-1, 0))

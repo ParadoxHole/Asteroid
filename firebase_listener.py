@@ -8,6 +8,8 @@ firebase_admin.initialize_app(cred, {"databaseURL":"https://forfourplayers-defau
 # Reference to the loginEvents node
 login_events_ref = db.reference('loginEvents')
 
+import ui
+
 class FirebaseListener:
     def __init__(self, game):
         self.game = game
@@ -26,7 +28,7 @@ class FirebaseListener:
                 player_seat = data.get('playerSeat')
 
                 print(f'Client ID: {user_id}, Email: {email}, ArcadeID: {arcade_id}, PlayerSeat: {player_seat}')
-                self.game.add_player(user_id, player_seat, email)
+                self.game.add_player(user_id, arcade_id, player_seat, email)
             except auth.AuthError as e:
                 print(f'Error retrieving user data: {e}')
             except Exception as e:
@@ -42,17 +44,34 @@ def start_listener(game):
 def stop_listener(listener):
     listener.stop()
     
-def save_score(user_id, new_score):
-    score_ref = db.reference(f'users/{user_id}/scores')
+def save_score(user_id, arcade_id, player_seat, new_score):
     
+    if not user_id:
+        return
+    
+    if user_id == 'geust':
+        #ask for login
+        
+        return
+    
+    score_ref = db.reference(f'users/{user_id}/scores')
     # Fetch current scores
     scores = score_ref.get() or []
-
     # Add the new score
     scores.append(round(new_score))
-
     # Sort scores in descending order and keep only the top 10
     scores = sorted(scores, reverse=True)[:10]
-
     # Update the scores in the database
     score_ref.set(scores)
+    
+    
+    # Remove the user from the seat
+    seat_ref = db.reference(f'seats/{arcade_id}/{player_seat}')
+    seat_ref.set({
+        'userId': '',
+        'timestamp': ''
+    })
+    print(player_seat)
+    print(arcade_id)
+    
+    

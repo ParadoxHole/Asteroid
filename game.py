@@ -75,9 +75,9 @@ class SpaceRocks:
 
     def generate_qr_codes(self):
         qr_codes = []
-        base_url = "http://localhost:3000/?arcadeId=4&playerSeat="
+        base_url = "http://localhost:3000/?arcadeId=1&playerSeat=" 
 
-        seats = ["blue", "red", "yellow", "green"]
+        seats = ["blue", "yellow", "green", "red"]
         for seat in seats:
             qr = qrcode.make(base_url + seat)
             buffered = io.BytesIO()
@@ -88,7 +88,7 @@ class SpaceRocks:
 
         return qr_codes
     
-    def add_player(self, user_id, player_seat, email):
+    def add_player(self, user_id, arcadId, player_seat, email):
         if self.state in ["game over", "win"]:
             print("Cannot log in after game over or win.")
             return
@@ -102,7 +102,7 @@ class SpaceRocks:
         if player_seat not in self.players:
             player_position = self.player_positions[player_seat]
             controls = input_handler.get_controls_for_seat(player_seat)
-            player = Player(player_position, self.get_color_for_seat(player_seat), controls, user_id)
+            player = Player(player_position, self.get_color_for_seat(player_seat), controls, user_id, arcadId, player_seat)
             self.players[player_seat] = player
             self.player_mapping[user_id] = player_seat  # Update the mapping
             print(f"Added player {email} at seat {player_seat}")
@@ -121,7 +121,6 @@ class SpaceRocks:
         }
         return colors[player_seat]
     
-
 
     def _init_pygame(self):
         pygame.init()
@@ -178,6 +177,7 @@ class SpaceRocks:
         self.asteroid = self.circle_spawner.spawn_initial_circles(self.initial_spawn_count)
         self.first_player_login_time = None
         self.game_started = False
+        
 
     def _process_game_logic(self):
         if self.state == "playing":
@@ -293,11 +293,11 @@ class SpaceRocks:
             for player_index, player in enumerate(self.players.values()):
                 player.draw(self.screen)
                 player.update()
-                player.draw_lives(self.screen, player_index)
-                ui.draw_score(self.screen, player, player_index)
-                ui.draw_superpower(self.screen, player, player_index)
+                player.draw_lives(self.screen, player.player_seat)
+                ui.draw_score(self.screen, player, player.player_seat)
+                ui.draw_superpower(self.screen, player, player.player_seat)
                 if player.waiting_to_respawn:
-                    ui.draw_respawn_screen(self.screen, player, player_index)
+                    ui.draw_respawn_screen(self.screen, player, player.player_seat)
             for circle in self.asteroid:
                 circle.draw(self.screen)
             for superpower in self.superpowers:

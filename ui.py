@@ -37,48 +37,48 @@ def draw_score(screen, player, player_number):
             rotated_text = pygame.transform.rotate(text, 90)  # Rotate 180 degrees
             screen.blit(rotated_text, (screen_width-30, screen_height-300))
             
-def draw_superpower(screen, player, player_number):
+def draw_superpower(screen, player, player_color):
     if player.superpower_active:
         screen_width = screen.get_width()
         screen_height = screen.get_height()
 
         font = pygame.font.Font("Fonts/Vectorb.ttf", 20)
         
-        if player_number == 0:
+        if player_color == "green":
             text = font.render(f"Superpower: {player.superpower_type}", True, player.spaceship.color)
             screen.blit(text, (20, screen_height-60))
-        elif player_number == 1:
+        elif player_color == "red":
             text = font.render(f"Superpower: {player.superpower_type}", True, player.spaceship.color)
             rotated_text = pygame.transform.rotate(text, -90)  # Rotate 90 degrees clockwise
             screen.blit(rotated_text, (10, 40))
-        elif player_number == 2:
+        elif player_color == "yellow":
             text = font.render(f"Superpower: {player.superpower_type}", True, player.spaceship.color)
             rotated_text = pygame.transform.rotate(text, 180)  # Rotate 90 degrees counterclockwise
             screen.blit(rotated_text, (screen_width-300, 30))
-        elif player_number == 3:
+        elif player_color == "blue":
             text = font.render(f"Superpower: {player.superpower_type}", True, player.spaceship.color)
             rotated_text = pygame.transform.rotate(text, 90)  # Rotate 180 degrees
             screen.blit(rotated_text, (screen_width-30, screen_height-300))
         
-def draw_respawn_screen(screen, player, player_number):
+def draw_respawn_screen(screen, player, player_color):
     if player.waiting_to_respawn:
         screen_width = screen.get_width()
         screen_height = screen.get_height()
 
         font = pygame.font.Font("Fonts/Vectorb.ttf", 20)
     
-        if player_number == 0:
+        if player_color == "green":
             text = font.render(f"Press {pygame.key.name(player.respawn_key).upper()} to Respawn", True, player.spaceship.color)
             screen.blit(text, (20, screen_height-30))
-        elif player_number == 1:
+        elif player_color == "red":
             text = font.render(f"Press Button 0 to Respawn", True, player.spaceship.color)
             rotated_text = pygame.transform.rotate(text, -90)  # Rotate 90 degrees clockwise
             screen.blit(rotated_text, (10, 20))
-        elif player_number == 2:
+        elif player_color == "yellow":
             text = font.render(f"Press {pygame.key.name(player.respawn_key).upper()} to Respawn", True, player.spaceship.color)
             rotated_text = pygame.transform.rotate(text, 180)  # Rotate 90 degrees counterclockwise
             screen.blit(rotated_text, (screen_width-300, 10))
-        elif player_number == 3:
+        elif player_color == "blue":
             text = font.render(f"Press {pygame.key.name(player.respawn_key).upper()} to Respawn", True, player.spaceship.color)
             rotated_text = pygame.transform.rotate(text, 90)  # Rotate 180 degrees
             screen.blit(rotated_text, (screen_width-30, screen_height-300))
